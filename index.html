@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Menampilkan GeoJSON dengan Leaflet</title>
+    <title>Menampilkan GeoJSON dengan Overlay Leaflet</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -17,31 +17,62 @@
     </style>
   </head>
   <body>
-    <h2>Menampilkan GeoJSON dari File</h2>
+    <h2>Menampilkan GeoJSON dengan Overlay</h2>
     <div id="map"></div>
 
     <script>
       // 1️⃣ Inisialisasi peta
-      var map = L.map("map").setView([-6.2, 106.816666], 10); // Jakarta
+      var map = L.map('map').setView([-7.756928, 113.211502], 7); // Koordinat awal dengan zoom level 7
 
       // 2️⃣ Tambahkan Tile Layer (Peta Dasar)
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
+      var osmLayer = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          attribution: "&copy; OpenStreetMap contributors",
+        }
+      ).addTo(map);
 
-      // 3️⃣ Muat GeoJSON dari file lokal
-      fetch("ok.geojson") // Sesuaikan dengan lokasi file
+      var satelliteLayer = L.tileLayer(
+        "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        {
+          subdomains: ["mt0", "mt1", "mt2", "mt3"],
+          attribution: "&copy; Google Satellite",
+        }
+      );
+
+      // 3️⃣ Layer untuk menyimpan GeoJSON
+      var geoJsonLayer = L.layerGroup();
+
+      // 4️⃣ Muat GeoJSON dari file lokal
+      fetch("ya.geojson")
         .then((response) => response.json())
         .then((data) => {
-          L.geoJSON(data, {
+          var geoJson = L.geoJSON(data, {
+            style: function (feature) {
+              return { color: "red", weight: 2, fillOpacity: 0.5 }; // Warna overlay
+            },
             onEachFeature: function (feature, layer) {
               if (feature.properties && feature.properties.name) {
-                layer.bindPopup(feature.properties.name);
+                layer.bindPopup("<b>" + feature.properties.name + "</b>");
               }
             },
-          }).addTo(map);
+          });
+          geoJsonLayer.addLayer(geoJson); // Tambahkan ke layer group
+          geoJsonLayer.addTo(map);
         })
         .catch((error) => console.error("Error loading GeoJSON:", error));
+
+      // 5️⃣ Buat Layer Control
+      var baseLayers = {
+        OpenStreetMap: osmLayer,
+        "Google Satellite": satelliteLayer,
+      };
+
+      var overlayLayers = {
+        "GeoJSON Layer": geoJsonLayer,
+      };
+
+      L.control.layers(baseLayers, overlayLayers).addTo(map);
     </script>
   </body>
 </html>
